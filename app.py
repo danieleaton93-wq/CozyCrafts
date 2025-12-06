@@ -70,6 +70,7 @@ except Exception as e:
 
 # --- Helper Functions ---
 
+@st.cache_data(show_spinner=False)
 def generate_image_prompt(inputs):
     """
     Uses Gemini 2.0 Flash to translate user inputs into a visual prompt.
@@ -103,6 +104,7 @@ def generate_image_prompt(inputs):
         st.error(f"Error generating prompt with Gemini: {e}")
         return None
 
+@st.cache_data(show_spinner=False)
 def generate_image(prompt, embellishments=None):
     """
     Uses Pollinations.ai to generate an image from the prompt (Free, no API key required).
@@ -114,7 +116,7 @@ def generate_image(prompt, embellishments=None):
         
         # Adding nologo=true to remove the watermark if possible, though it's a free service.
         # Enhancing prompt slightly for better results with Pollinations (Stable Diffusion based)
-        base_prompt = f"{encoded_prompt}, high quality, photorealistic, 8k, crochet texture, wide shot, full view, centered, uncropped"
+        base_prompt = f"{encoded_prompt}, photorealistic, 8k, crochet texture, centered"
         
         if embellishments and embellishments.lower() != "none":
              base_prompt += f", adorned with {embellishments}, {embellishments} details"
