@@ -311,15 +311,6 @@ if st.button("📧 Contact Designer"):
 with st.container():
     st.subheader("1. Design Your Item")
 
-    # Add slider lock toggle at the top for easy access
-    col_lock = st.columns([0.7, 0.3])
-    with col_lock[1]:
-        st.session_state.sliders_locked = st.toggle(
-            "🔒 Lock Sliders",
-            value=st.session_state.sliders_locked,
-            help="Enable to prevent accidental adjustments on touch screens"
-        )
-
     col1, col2 = st.columns(2)
 
     with col1:
@@ -418,6 +409,14 @@ with st.container():
                 help="Slide to adjust the width.",
                 disabled=st.session_state.sliders_locked
             )
+    # Add slider lock toggle at the top for easy access
+    col_lock = st.columns([0.7, 0.3])
+    with col_lock[1]:
+        st.session_state.sliders_locked = st.toggle(
+            "🔒 Lock Sliders",
+            value=st.session_state.sliders_locked,
+            help="Enable to prevent accidental adjustments on touch screens"
+        )
 
     additional_info = st.text_area(
         "Additional Information / Custom Requests",
