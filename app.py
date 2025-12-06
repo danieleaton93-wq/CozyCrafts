@@ -135,29 +135,58 @@ def generate_image_prompt(inputs):
         # Remove trailing comma
         measurements_str = measurements_str.rstrip(", ")
 
-        prompt = f"""
-        You are an expert Crochet Designer and AI Prompt Engineer.
-        Your task is to take the following user specifications for a crochet item and convert them into a highly descriptive, photorealistic image generation prompt for an AI model.
-        
-        User Inputs:
-        - Category: {inputs['category']}
-        - Item Name: {inputs['item_name']}
-        - Measurements/Size: {measurements_str}
-        - Embellishments: {inputs['embellishment_types']}
-        - Color Palette: {inputs['colors']}
-        - Embellishments: {inputs['embellishment_types']}
-        - Color Palette: {inputs['colors']}
-        - Vibe/Style: {inputs['style']}
-        
-        
-        Constraints & Requirements:
-        - Emphasize textures: Mention specific stitches (e.g., waffle stitch, granny squares, ribbing), yarn types (e.g., chunky wool, soft acrylic halo, cotton), and craftsmanship.
-        - Translate measurements into visual proportions (e.g., "cropped length," "oversized sleeves," "knee-length").
-        - CRITICAL: Use the "Embellishments" input to make sure the specific embellishment (e.g. Pearls, Ruffles) is clearly visible and features prominently in the design. If the user selected an embellishment, you MUST describe how it is applied to the item.
-        - The output should be a single, cohesive paragraph describing the visual appearance of the item, ensuring the entire item is visible with no clipping of the image.
-        - The item MUST be shown from a direct front view, facing forward towards the camera.
-        - Do NOT include markdown formatting or introductory text. Just the prompt.
-        """
+        # Determine whether the output should be a crocheted item or a normal fabric garment
+        crochet_categories = {"Blankets", "Stuffed Animals"}
+        crochet_styles = {"Acrylic", "Aran", "Chunky"}
+
+        category = inputs.get('category', '')
+        style = inputs.get('style', '')
+
+        # Force non-crochet for explicit non-crochet indicators
+        if category == "Lingerie" or style.lower() == "silk":
+            is_crochet = False
+        else:
+            is_crochet = (category in crochet_categories) or (
+                style in crochet_styles)
+
+        # Build a concise user inputs summary
+        user_inputs_block = (
+            f"Category: {category}; "
+            f"Item Name: {inputs.get('item_name', '')}; "
+            f"Measurements: {measurements_str}; "
+            f"Embellishments: {inputs.get('embellishment_types', 'None')}; "
+            f"Colors: {inputs.get('colors', '')}; "
+            f"Style: {style}"
+        )
+
+        if is_crochet:
+            prompt = f"""
+            You are an expert Crochet Designer and AI Prompt Engineer. Produce a single, cohesive, photorealistic image generation prompt for an AI model describing a handcrafted crochet item.
+
+            {user_inputs_block}
+
+            Constraints & Requirements:
+            - Emphasize crochet textures and visible stitches: mention specific stitches where appropriate (e.g., waffle stitch, granny squares, shell stitch, ribbing) and yarn types (e.g., chunky wool, soft acrylic halo, cotton).
+            - Describe how measurements translate visually (e.g., "cropped length", "oversized sleeves", "knee-length", "proportional to bust/waist/hip").
+            - CRITICAL: If an embellishment is selected, describe exactly how and where it is applied so it is clearly visible (e.g., "pearl beads cascading along the neckline", "wooden buttons down the center front").
+            - Mention craftsmanship cues: hand-stitched finishes, visible seams, soft drape from yarn weight, and natural fiber textures.
+            - Show the entire item from a direct front view, centered, with no clipping.
+            - Do not include extraneous formatting or explanatory text — output must be a single paragraph prompt only.
+            """
+        else:
+            prompt = f"""
+            You are an experienced Fashion Designer and AI Prompt Engineer. Produce a single, cohesive, photorealistic image generation prompt for an AI model describing a sewn or knitted garment made from fabric (not a crochet piece).
+
+            {user_inputs_block}
+
+            Constraints & Requirements:
+            - Emphasize fabric characteristics: drape, weave, sheen, and tailoring details (e.g., seams, darts, hems, interfacing).
+            - Avoid mentioning crochet, yarn stitches, or handmade crochet techniques.
+            - Translate measurements into visual proportions (e.g., "cropped length", "fitted waist", "knee-length").
+            - CRITICAL: If an embellishment is selected, describe exactly how and where it is applied so it is clearly visible (e.g., "lace trim along the cuffs", "beading at the bodice").
+            - Show the entire item from a direct front view, centered, with no clipping.
+            - Do not include extraneous formatting or explanatory text — output must be a single paragraph prompt only.
+            """
 
         response = model.generate_content(prompt)
         return response.text.strip()
