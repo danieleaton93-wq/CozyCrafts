@@ -265,7 +265,7 @@ with st.container():
         category = st.selectbox(
             "Item Category",
             ["Dresses", "Tops", "Bottoms", "Lingerie",
-                "Pyjamas,Blankets,Stuffed Animals"]
+                "Pyjamas", "Blankets", "Stuffed Animals"]
         )
         style = st.selectbox(
             "Fabric Types",
