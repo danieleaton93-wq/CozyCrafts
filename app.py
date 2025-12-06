@@ -89,6 +89,12 @@ if "form_inputs" not in st.session_state:
 if "sliders_locked" not in st.session_state:
     st.session_state.sliders_locked = False
 
+# Ensure sliders reflect the latest persisted checkbox value (if any).
+# This avoids needing experimental_rerun and works across Streamlit versions.
+st.session_state.sliders_locked = st.session_state.get(
+    "sliders_lock_toggle", st.session_state.sliders_locked)
+
+
 # --- API Setup ---
 try:
     if "GEMINI_API_KEY" in st.secrets:
@@ -367,7 +373,7 @@ with st.container():
                 "Bust Measurement (cm)",
                 min_value=20, max_value=180, value=70,
                 help="Slide to adjust the bust size.",
-                disabled=st.session_state.sliders_locked
+                disabled=st.session_state.get('sliders_locked', False)
             )
 
         if "Waist" in active_measurements:
@@ -375,7 +381,7 @@ with st.container():
                 "Waist Measurement (cm)",
                 min_value=20, max_value=180, value=70,
                 help="Slide to adjust the waist size.",
-                disabled=st.session_state.sliders_locked
+                disabled=st.session_state.get('sliders_locked', False)
             )
 
         if "Hip" in active_measurements:
@@ -383,7 +389,7 @@ with st.container():
                 "Hip Measurement (cm)",
                 min_value=20, max_value=180, value=70,
                 help="Slide to adjust the hip size.",
-                disabled=st.session_state.sliders_locked
+                disabled=st.session_state.get('sliders_locked', False)
             )
 
         # "Length" and "Height" both use the measurements_length variable, just different label
@@ -392,14 +398,14 @@ with st.container():
                 "Length (cm)",
                 min_value=10, max_value=250, value=60,
                 help="Slide to adjust the length.",
-                disabled=st.session_state.sliders_locked
+                disabled=st.session_state.get('sliders_locked', False)
             )
         elif "Height" in active_measurements:
             measurements_length = st.slider(
                 "Height (cm)",
                 min_value=5, max_value=100, value=30,
                 help="Slide to adjust the height of the stuffed animal.",
-                disabled=st.session_state.sliders_locked
+                disabled=st.session_state.get('sliders_locked', False)
             )
 
         if "Width" in active_measurements:
@@ -407,15 +413,18 @@ with st.container():
                 "Width (cm)",
                 min_value=10, max_value=250, value=100,
                 help="Slide to adjust the width.",
-                disabled=st.session_state.sliders_locked
+                disabled=st.session_state.get('sliders_locked', False)
             )
-    # Add slider lock toggle at the top for easy access
+    # Add slider lock toggle (placed visually here) but use a checkbox
     col_lock = st.columns([0.7, 0.3])
     with col_lock[1]:
-        st.session_state.sliders_locked = st.toggle(
+        # The checkbox is given a stable key; its persisted value is used
+        st.checkbox(
             "🔒 Lock Sliders",
-            value=st.session_state.sliders_locked,
-            help="Enable to prevent accidental adjustments on touch screens"
+            value=st.session_state.get(
+                "sliders_lock_toggle", st.session_state.sliders_locked),
+            key="sliders_lock_toggle",
+            help="Enable to prevent accidental adjustments on touch screens",
         )
 
     additional_info = st.text_area(
