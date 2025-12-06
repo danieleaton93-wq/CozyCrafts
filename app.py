@@ -79,6 +79,24 @@ def generate_image_prompt(inputs):
     try:
         model = genai.GenerativeModel("gemini-2.0-flash")
 
+        # Dynamic Measurements Construction
+        measurements_str = ""
+        if inputs.get('measurements_bust'):
+            measurements_str += f"Bust: {inputs['measurements_bust']}cm, "
+        if inputs.get('measurements_waist'):
+            measurements_str += f"Waist: {inputs['measurements_waist']}cm, "
+        if inputs.get('measurements_hip'):
+            measurements_str += f"Hip: {inputs['measurements_hip']}cm, "
+        if inputs.get('measurements_length'):
+            # Context-aware label for prompt
+            label = "Height" if inputs['category'] == "Stuffed Animals" else "Length"
+            measurements_str += f"{label}: {inputs['measurements_length']}cm, "
+        if inputs.get('measurements_width'):
+             measurements_str += f"Width: {inputs['measurements_width']}cm, "
+
+        # Remove trailing comma
+        measurements_str = measurements_str.rstrip(", ")
+
         prompt = f"""
         You are an expert Crochet Designer and AI Prompt Engineer.
         Your task is to take the following user specifications for a crochet item and convert them into a highly descriptive, photorealistic image generation prompt for an AI model.
@@ -86,7 +104,7 @@ def generate_image_prompt(inputs):
         User Inputs:
         - Category: {inputs['category']}
         - Item Name: {inputs['item_name']}
-        - Measurements/Size: Bust: {inputs['measurements_bust']}, Waist: {inputs['measurements_waist']}, Hip: {inputs['measurements_hip']}, Length: {inputs['measurements_length']}
+        - Measurements/Size: {measurements_str}
         - Embellishments: {inputs['embellishment_types']}
         - Color Palette: {inputs['colors']}
         - Vibe/Style: {inputs['style']}
@@ -96,6 +114,7 @@ def generate_image_prompt(inputs):
         - Translate measurements into visual proportions (e.g., "cropped length," "oversized sleeves," "knee-length").
         - CRITICAL: Use the "Embellishments" input to make sure the specific embellishment (e.g. Pearls, Ruffles) is clearly visible and features prominently in the design. If the user selected an embellishment, you MUST describe how it is applied to the item.
         - The output should be a single, cohesive paragraph describing the visual appearance of the item, ensuring the entire item is visible with no clipping of the image.
+        - The item MUST be shown from a direct front view, facing forward towards the camera.
         - Do NOT include markdown formatting or introductory text. Just the prompt.
         """
 
@@ -118,7 +137,7 @@ def generate_image(prompt, embellishments=None):
 
         # Adding nologo=true to remove the watermark if possible, though it's a free service.
         # Enhancing prompt slightly for better results with Pollinations (Stable Diffusion based)
-        base_prompt = f"{encoded_prompt}, photorealistic, 8k, crochet texture, centered"
+        base_prompt = f"{encoded_prompt}, photorealistic, 8k, crochet texture, centered, full front view, facing camera"
 
         if embellishments and embellishments.lower() != "none":
             base_prompt += f", adorned with {embellishments}, {embellishments} details"
@@ -238,7 +257,6 @@ def contact_form():
 
 # --- UI Layout ---
 
-
 # 1. Title Layout (Responsive to Icon Type)
 if isinstance(icon, str):
     st.title(f"{icon} Custom Crochet Order Visualizer")
@@ -279,36 +297,72 @@ with st.container():
         )
 
     with col2:
-        measurements_bust = st.slider(
-            "Bust Measurement (cm)",
-            min_value=20,
-            max_value=180,
-            value=70,
-            help="Slide to adjust the bust size."
-        )
-        measurements_waist = st.slider(
-            "Waist Measurement (cm)",
-            min_value=20,
-            max_value=180,
-            value=70,
-            help="Slide to adjust the waist size."
-        )
-        measurements_hip = st.slider(
-            "Hip Measurement (cm)",
-            min_value=20,
-            max_value=180,
-            value=70,
-            help="Slide to adjust the hip size."
-        )
-        measurements_length = st.slider(
-            "Length (cm)",
-            min_value=10,
-            max_value=200,
-            value=60,
-            help="Slide to adjust the length of the item."
-        )
+        # Measurement Logic Configuration
+        # Default to all if not specified (safe fallback)
+        category_config = {
+            "Dresses": ["Bust", "Waist", "Hip", "Length"],
+            "Tops": ["Bust", "Waist", "Length"],
+            "Bottoms": ["Waist", "Hip", "Length"],
+            "Lingerie": ["Bust", "Waist", "Hip"],
+            "Pyjamas": ["Bust", "Waist", "Hip", "Length"],
+            "Blankets": ["Length", "Width"],
+            "Stuffed Animals": ["Height"]  # We will map "Height" to the Length variable logic
+        }
+
+        # Determine which measurements to show based on category
+        active_measurements = category_config.get(category, ["Length"])
+
+        measurements_bust = None
+        measurements_waist = None
+        measurements_hip = None
+        measurements_length = None
+        measurements_width = None
+
+        if "Bust" in active_measurements:
+            measurements_bust = st.slider(
+                "Bust Measurement (cm)",
+                min_value=20, max_value=180, value=70,
+                help="Slide to adjust the bust size."
+            )
+        
+        if "Waist" in active_measurements:
+            measurements_waist = st.slider(
+                "Waist Measurement (cm)",
+                min_value=20, max_value=180, value=70,
+                help="Slide to adjust the waist size."
+            )
+            
+        if "Hip" in active_measurements:
+            measurements_hip = st.slider(
+                "Hip Measurement (cm)",
+                min_value=20, max_value=180, value=70,
+                help="Slide to adjust the hip size."
+            )
+
+        # "Length" and "Height" both use the measurements_length variable, just different label
+        if "Length" in active_measurements:
+            measurements_length = st.slider(
+                "Length (cm)",
+                min_value=10, max_value=250, value=60,
+                help="Slide to adjust the length."
+            )
+        elif "Height" in active_measurements:
+            measurements_length = st.slider(
+                "Height (cm)",
+                min_value=5, max_value=100, value=30,
+                help="Slide to adjust the height of the stuffed animal."
+            )
+
+        if "Width" in active_measurements:
+            measurements_width = st.slider(
+                "Width (cm)",
+                min_value=10, max_value=250, value=100,
+                help="Slide to adjust the width."
+            )
 
     generate_btn = st.button("Generate Preview", type="primary")
+    st.info("Generating Images Can Take Some Time. Please Be Patient.")
+    st.caption("**Please note that the generated image is a preview and may not be an exact representation of the final product.**")
 
 # 2. Logic for Generation
 if generate_btn:
@@ -326,6 +380,7 @@ if generate_btn:
                 "measurements_waist": measurements_waist,
                 "measurements_hip": measurements_hip,
                 "measurements_length": measurements_length,
+                "measurements_width": measurements_width,
                 "colors": colors,
                 "style": style
             }
@@ -378,10 +433,11 @@ if st.session_state.generated_image:
                     "User Email": user_email,
                     "Category": st.session_state.form_inputs['category'],
                     "Item Name": st.session_state.form_inputs['item_name'],
-                    "Bust (cm)": st.session_state.form_inputs['measurements_bust'],
-                    "Waist (cm)": st.session_state.form_inputs['measurements_waist'],
-                    "Hip (cm)": st.session_state.form_inputs['measurements_hip'],
-                    "Length (cm)": st.session_state.form_inputs['measurements_length'],
+                    "Bust (cm)": st.session_state.form_inputs.get('measurements_bust'),
+                    "Waist (cm)": st.session_state.form_inputs.get('measurements_waist'),
+                    "Hip (cm)": st.session_state.form_inputs.get('measurements_hip'),
+                    "Length (cm)": st.session_state.form_inputs.get('measurements_length'),
+                    "Width (cm)": st.session_state.form_inputs.get('measurements_width'),
                     "Embellishments": st.session_state.form_inputs['embellishment_types'],
                     "Colors": st.session_state.form_inputs['colors'],
                     "Style": st.session_state.form_inputs['style'],
