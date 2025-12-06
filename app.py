@@ -13,6 +13,36 @@ import ssl
 from email.message import EmailMessage
 from PIL import Image
 
+# --- Slider Protection Styles ---
+SLIDER_PROTECTION_CSS = """
+<style>
+/* Prevent accidental slider adjustments on touch devices */
+.stSlider {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+.stSlider input[type="range"] {
+    touch-action: manipulation;
+}
+
+/* Add visual feedback for locked sliders */
+.slider-locked {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.slider-locked input[type="range"] {
+    cursor: not-allowed;
+}
+</style>
+"""
+
+# Inject CSS on app load
+st.markdown(SLIDER_PROTECTION_CSS, unsafe_allow_html=True)
+
 # --- Configuration & Setup ---
 current_dir = os.path.dirname(os.path.abspath(__file__))
 print(current_dir)
@@ -56,6 +86,8 @@ if "generated_description" not in st.session_state:
     st.session_state.generated_description = None
 if "form_inputs" not in st.session_state:
     st.session_state.form_inputs = {}
+if "sliders_locked" not in st.session_state:
+    st.session_state.sliders_locked = False
 
 # --- API Setup ---
 try:
@@ -92,7 +124,7 @@ def generate_image_prompt(inputs):
             label = "Height" if inputs['category'] == "Stuffed Animals" else "Length"
             measurements_str += f"{label}: {inputs['measurements_length']}cm, "
         if inputs.get('measurements_width'):
-             measurements_str += f"Width: {inputs['measurements_width']}cm, "
+            measurements_str += f"Width: {inputs['measurements_width']}cm, "
 
         # Remove trailing comma
         measurements_str = measurements_str.rstrip(", ")
@@ -110,7 +142,7 @@ def generate_image_prompt(inputs):
         - Embellishments: {inputs['embellishment_types']}
         - Color Palette: {inputs['colors']}
         - Vibe/Style: {inputs['style']}
-        - Additional Info/Custom Requests: {inputs.get('additional_info', 'None')}
+        
         
         Constraints & Requirements:
         - Emphasize textures: Mention specific stitches (e.g., waffle stitch, granny squares, ribbing), yarn types (e.g., chunky wool, soft acrylic halo, cotton), and craftsmanship.
@@ -260,6 +292,7 @@ def contact_form():
 
 # --- UI Layout ---
 
+
 # 1. Title Layout (Responsive to Icon Type)
 if isinstance(icon, str):
     st.title(f"{icon} Custom Crochet Order Visualizer")
@@ -278,6 +311,15 @@ if st.button("📧 Contact Designer"):
 with st.container():
     st.subheader("1. Design Your Item")
 
+    # Add slider lock toggle at the top for easy access
+    col_lock = st.columns([0.7, 0.3])
+    with col_lock[1]:
+        st.session_state.sliders_locked = st.toggle(
+            "🔒 Lock Sliders",
+            value=st.session_state.sliders_locked,
+            help="Enable to prevent accidental adjustments on touch screens"
+        )
+
     col1, col2 = st.columns(2)
 
     with col1:
@@ -286,17 +328,18 @@ with st.container():
             ["Dresses", "Tops", "Bottoms", "Lingerie",
                 "Pyjamas", "Blankets", "Stuffed Animals"]
         )
-        
+
         # Item Name is hidden for Blankets, optional for others if needed but user requested dynamic
         if category == "Blankets":
-            item_name = "Custom Blanket" # Default value
+            item_name = "Custom Blanket"  # Default value
         else:
             item_name = st.text_input(
                 "Specific Item Name", placeholder="e.g., Granny Square Cardigan")
 
         style = st.selectbox(
             "Fabric Types",
-            ["Cotton", "Silk", "Linen", "Patterned,Acrylic","Double Knit","Aran","Chunky"]
+            ["Cotton", "Silk", "Linen", "Patterned",
+                "Acrylic", "Double Knit", "Aran", "Chunky"]
         )
         colors = st.text_input(
             "Color Palette", placeholder="e.g., Sage Green, Cream, and Dusty Rose")
@@ -315,7 +358,8 @@ with st.container():
             "Lingerie": ["Bust", "Waist", "Hip"],
             "Pyjamas": ["Bust", "Waist", "Hip", "Length"],
             "Blankets": ["Length", "Width"],
-            "Stuffed Animals": ["Height"]  # We will map "Height" to the Length variable logic
+            # We will map "Height" to the Length variable logic
+            "Stuffed Animals": ["Height"]
         }
 
         # Determine which measurements to show based on category
@@ -331,21 +375,24 @@ with st.container():
             measurements_bust = st.slider(
                 "Bust Measurement (cm)",
                 min_value=20, max_value=180, value=70,
-                help="Slide to adjust the bust size."
+                help="Slide to adjust the bust size.",
+                disabled=st.session_state.sliders_locked
             )
-        
+
         if "Waist" in active_measurements:
             measurements_waist = st.slider(
                 "Waist Measurement (cm)",
                 min_value=20, max_value=180, value=70,
-                help="Slide to adjust the waist size."
+                help="Slide to adjust the waist size.",
+                disabled=st.session_state.sliders_locked
             )
-            
+
         if "Hip" in active_measurements:
             measurements_hip = st.slider(
                 "Hip Measurement (cm)",
                 min_value=20, max_value=180, value=70,
-                help="Slide to adjust the hip size."
+                help="Slide to adjust the hip size.",
+                disabled=st.session_state.sliders_locked
             )
 
         # "Length" and "Height" both use the measurements_length variable, just different label
@@ -353,20 +400,23 @@ with st.container():
             measurements_length = st.slider(
                 "Length (cm)",
                 min_value=10, max_value=250, value=60,
-                help="Slide to adjust the length."
+                help="Slide to adjust the length.",
+                disabled=st.session_state.sliders_locked
             )
         elif "Height" in active_measurements:
             measurements_length = st.slider(
                 "Height (cm)",
                 min_value=5, max_value=100, value=30,
-                help="Slide to adjust the height of the stuffed animal."
+                help="Slide to adjust the height of the stuffed animal.",
+                disabled=st.session_state.sliders_locked
             )
 
         if "Width" in active_measurements:
             measurements_width = st.slider(
                 "Width (cm)",
                 min_value=10, max_value=250, value=100,
-                help="Slide to adjust the width."
+                help="Slide to adjust the width.",
+                disabled=st.session_state.sliders_locked
             )
 
     additional_info = st.text_area(
