@@ -281,13 +281,19 @@ with st.container():
     col1, col2 = st.columns(2)
 
     with col1:
-        item_name = st.text_input(
-            "Specific Item Name", placeholder="e.g., Granny Square Cardigan")
         category = st.selectbox(
             "Item Category",
             ["Dresses", "Tops", "Bottoms", "Lingerie",
                 "Pyjamas", "Blankets", "Stuffed Animals"]
         )
+        
+        # Item Name is hidden for Blankets, optional for others if needed but user requested dynamic
+        if category == "Blankets":
+            item_name = "Custom Blanket" # Default value
+        else:
+            item_name = st.text_input(
+                "Specific Item Name", placeholder="e.g., Granny Square Cardigan")
+
         style = st.selectbox(
             "Fabric Types",
             ["Cotton", "Silk", "Linen", "Patterned,Acrylic","Double Knit","Aran","Chunky"]
