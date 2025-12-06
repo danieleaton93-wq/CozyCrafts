@@ -107,7 +107,10 @@ def generate_image_prompt(inputs):
         - Measurements/Size: {measurements_str}
         - Embellishments: {inputs['embellishment_types']}
         - Color Palette: {inputs['colors']}
+        - Embellishments: {inputs['embellishment_types']}
+        - Color Palette: {inputs['colors']}
         - Vibe/Style: {inputs['style']}
+        - Additional Info/Custom Requests: {inputs.get('additional_info', 'None')}
         
         Constraints & Requirements:
         - Emphasize textures: Mention specific stitches (e.g., waffle stitch, granny squares, ribbing), yarn types (e.g., chunky wool, soft acrylic halo, cotton), and craftsmanship.
@@ -287,7 +290,7 @@ with st.container():
         )
         style = st.selectbox(
             "Fabric Types",
-            ["Cotton", "Silk", "Linen", "Patterned"]
+            ["Cotton", "Silk", "Linen", "Patterned,Acrylic","Double Knit","Aran","Chunky"]
         )
         colors = st.text_input(
             "Color Palette", placeholder="e.g., Sage Green, Cream, and Dusty Rose")
@@ -360,6 +363,11 @@ with st.container():
                 help="Slide to adjust the width."
             )
 
+    additional_info = st.text_area(
+        "Additional Information / Custom Requests",
+        placeholder="e.g., Please add 'Baby Smith' text on the blanket, or ensure the buttons are wooden."
+    )
+
     generate_btn = st.button("Generate Preview", type="primary")
     st.info("Generating Images Can Take Some Time. Please Be Patient.")
     st.caption("**Please note that the generated image is a preview and may not be an exact representation of the final product.**")
@@ -381,8 +389,10 @@ if generate_btn:
                 "measurements_hip": measurements_hip,
                 "measurements_length": measurements_length,
                 "measurements_width": measurements_width,
+                "measurements_width": measurements_width,
                 "colors": colors,
-                "style": style
+                "style": style,
+                "additional_info": additional_info
             }
 
             # Step 2: Translation Layer
@@ -441,6 +451,7 @@ if st.session_state.generated_image:
                     "Embellishments": st.session_state.form_inputs['embellishment_types'],
                     "Colors": st.session_state.form_inputs['colors'],
                     "Style": st.session_state.form_inputs['style'],
+                    "Additional Info": st.session_state.form_inputs.get('additional_info'),
                     "AI Description": st.session_state.generated_description,
 
                 }])
