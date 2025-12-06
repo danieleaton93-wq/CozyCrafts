@@ -70,6 +70,7 @@ except Exception as e:
 
 # --- Helper Functions ---
 
+
 @st.cache_data(show_spinner=False)
 def generate_image_prompt(inputs):
     """
@@ -77,7 +78,7 @@ def generate_image_prompt(inputs):
     """
     try:
         model = genai.GenerativeModel("gemini-2.0-flash")
-        
+
         prompt = f"""
         You are an expert Crochet Designer and AI Prompt Engineer.
         Your task is to take the following user specifications for a crochet item and convert them into a highly descriptive, photorealistic image generation prompt for an AI model.
@@ -97,12 +98,13 @@ def generate_image_prompt(inputs):
         - The output should be a single, cohesive paragraph describing the visual appearance of the item, ensuring the entire item is visible with no clipping of the image.
         - Do NOT include markdown formatting or introductory text. Just the prompt.
         """
-        
+
         response = model.generate_content(prompt)
         return response.text.strip()
     except Exception as e:
         st.error(f"Error generating prompt with Gemini: {e}")
         return None
+
 
 @st.cache_data(show_spinner=False)
 def generate_image(prompt, embellishments=None):
@@ -110,32 +112,34 @@ def generate_image(prompt, embellishments=None):
     Uses Pollinations.ai to generate an image from the prompt (Free, no API key required).
     """
     try:
-        # Pollinations uses a simple URL structure. 
+        # Pollinations uses a simple URL structure.
         # We encode the prompt to ensure URL safety.
         encoded_prompt = urllib.parse.quote(prompt)
-        
+
         # Adding nologo=true to remove the watermark if possible, though it's a free service.
         # Enhancing prompt slightly for better results with Pollinations (Stable Diffusion based)
         base_prompt = f"{encoded_prompt}, photorealistic, 8k, crochet texture, centered"
-        
+
         if embellishments and embellishments.lower() != "none":
-             base_prompt += f", adorned with {embellishments}, {embellishments} details"
-             
+            base_prompt += f", adorned with {embellishments}, {embellishments} details"
+
         final_prompt = base_prompt
-        
+
         url = f"https://image.pollinations.ai/prompt/{final_prompt}?nologo=true"
-        
+
         response = requests.get(url)
-        
+
         if response.status_code == 200:
             return io.BytesIO(response.content)
         else:
-            st.error(f"Image generation failed: {response.status_code} - {response.text}")
+            st.error(
+                f"Image generation failed: {response.status_code} - {response.text}")
             return None
 
     except Exception as e:
         st.error(f"Error generating image: {e}")
         return None
+
 
 def save_order(data):
     """
@@ -146,18 +150,19 @@ def save_order(data):
         # Fetch existing data to append
         # Fetch existing data to append
         existing_data = conn.read(worksheet="Orders", ttl=5)
-        
+
         # If sheet is empty, create a new dataframe
         if existing_data is None:
-             existing_data = pd.DataFrame()
-        
+            existing_data = pd.DataFrame()
+
         updated_df = pd.concat([existing_data, data], ignore_index=True)
-        
+
         conn.update(data=updated_df, worksheet="Orders")
         return True
     except Exception as e:
         st.error(f"Error saving to Google Sheets: {e}")
         return False
+
 
 def send_email(subject, message_body, user_email):
     """
@@ -166,10 +171,11 @@ def send_email(subject, message_body, user_email):
     try:
         # Check for credentials
         if "email" not in st.secrets:
-            st.warning("Email configuration missing in .streamlit/secrets.toml. Email not sent.")
+            st.warning(
+                "Email configuration missing in .streamlit/secrets.toml. Email not sent.")
             # For testing, we just return True to verify UI flow
             return True
-            
+
         email_config = st.secrets["email"]
         smtp_server = email_config["smtp_server"]
         smtp_port = email_config["smtp_port"]
@@ -182,7 +188,7 @@ def send_email(subject, message_body, user_email):
         msg["Subject"] = f"New Inquiry: {subject}"
         msg["From"] = sender_email
         msg["To"] = receiver_email
-        
+
         # Content
         full_content = f"""
         New Message from CozyCrafts App:
@@ -201,34 +207,37 @@ def send_email(subject, message_body, user_email):
             server.starttls(context=context)
             server.login(sender_email, password)
             server.send_message(msg)
-            
+
         return True
 
     except Exception as e:
         st.error(f"Error sending email: {e}")
         return False
 
+
 @st.dialog("Contact Designer")
 def contact_form():
     st.write("Have a question or custom request? Send me a message!")
-    
+
     with st.form("contact_form"):
         user_email = st.text_input("Your Email")
         subject = st.text_input("Subject")
         message = st.text_area("Message")
-        
+
         submit = st.form_submit_button("Send Message")
-        
+
         if submit:
             if not user_email or not subject or not message:
                 st.error("Please fill in all fields.")
             else:
                 if send_email(subject, message, user_email):
-                    st.success("Message sent successfully! I'll get back to you shortly.")
+                    st.success(
+                        "Message sent successfully! I'll get back to you shortly.")
                     time.sleep(2)
                     st.rerun()
 
 # --- UI Layout ---
+
 
 # 1. Title Layout (Responsive to Icon Type)
 if isinstance(icon, str):
@@ -238,7 +247,7 @@ else:
     col1, col2, col3 = st.columns([0.3, 0.4, 0.3])
     with col2:
         st.image(icon, width="stretch")
-   
+
 st.markdown("Design your dream crochet piece and see it come to life with AI!")
 
 if st.button("📧 Contact Designer"):
@@ -247,52 +256,54 @@ if st.button("📧 Contact Designer"):
 # 1. Input Form
 with st.container():
     st.subheader("1. Design Your Item")
-    
+
     col1, col2 = st.columns(2)
-    
+
     with col1:
-        item_name = st.text_input("Specific Item Name", placeholder="e.g., Granny Square Cardigan")
+        item_name = st.text_input(
+            "Specific Item Name", placeholder="e.g., Granny Square Cardigan")
         category = st.selectbox(
             "Item Category",
-            [ "Dresses","Tops", "Bottoms", "Lingerie","Pyjamas"]
+            ["Dresses", "Tops", "Bottoms", "Lingerie",
+                "Pyjamas,Blankets,Stuffed Animals"]
         )
         style = st.selectbox(
             "Fabric Types",
             ["Cotton", "Silk", "Linen", "Patterned"]
         )
-        colors = st.text_input("Color Palette", placeholder="e.g., Sage Green, Cream, and Dusty Rose")
+        colors = st.text_input(
+            "Color Palette", placeholder="e.g., Sage Green, Cream, and Dusty Rose")
         embellishment_types = st.selectbox(
             "Embellishment Types",
-            ["None", "Buttons", "Ruffles","Lace","Beading","Pearls"]
+            ["None", "Buttons", "Ruffles", "Lace", "Beading", "Pearls"]
         )
 
-        
     with col2:
         measurements_bust = st.slider(
-            "Bust Measurement (cm)", 
-            min_value=20, 
-            max_value=180, 
+            "Bust Measurement (cm)",
+            min_value=20,
+            max_value=180,
             value=70,
             help="Slide to adjust the bust size."
         )
         measurements_waist = st.slider(
-            "Waist Measurement (cm)", 
-            min_value=20, 
-            max_value=180, 
+            "Waist Measurement (cm)",
+            min_value=20,
+            max_value=180,
             value=70,
             help="Slide to adjust the waist size."
         )
         measurements_hip = st.slider(
-            "Hip Measurement (cm)", 
-            min_value=20, 
-            max_value=180, 
+            "Hip Measurement (cm)",
+            min_value=20,
+            max_value=180,
             value=70,
             help="Slide to adjust the hip size."
         )
         measurements_length = st.slider(
-            "Length (cm)", 
-            min_value=10, 
-            max_value=200, 
+            "Length (cm)",
+            min_value=10,
+            max_value=200,
             value=60,
             help="Slide to adjust the length of the item."
         )
@@ -302,13 +313,14 @@ with st.container():
 # 2. Logic for Generation
 if generate_btn:
     if not item_name or not colors:
-        st.warning("Please fill in all fields (Item Name, Colors) to generate a preview.")
+        st.warning(
+            "Please fill in all fields (Item Name, Colors) to generate a preview.")
     else:
         with st.spinner("Consulting the AI Crochet Designer... (Generating Prompt)"):
             # Store inputs in session state
             st.session_state.form_inputs = {
                 "category": category,
-                "embellishment_types": embellishment_types, 
+                "embellishment_types": embellishment_types,
                 "item_name": item_name,
                 "measurements_bust": measurements_bust,
                 "measurements_waist": measurements_waist,
@@ -317,17 +329,18 @@ if generate_btn:
                 "colors": colors,
                 "style": style
             }
-            
+
             # Step 2: Translation Layer
             visual_prompt = generate_image_prompt(st.session_state.form_inputs)
-            
+
             if visual_prompt:
                 st.session_state.generated_description = visual_prompt
-                
+
                 with st.spinner("Weaving pixels... (Generating Image)"):
                     # Step 3: Visualization Layer
-                    image = generate_image(visual_prompt, st.session_state.form_inputs.get('embellishment_types'))
-                    
+                    image = generate_image(
+                        visual_prompt, st.session_state.form_inputs.get('embellishment_types'))
+
                     if image:
                         st.session_state.generated_image = image
                     else:
@@ -337,23 +350,25 @@ if generate_btn:
 if st.session_state.generated_image:
     st.divider()
     st.subheader("2. Preview & Confirmation")
-    
-    st.image(st.session_state.generated_image, caption="AI Generated Preview", width="stretch")
-    
+
+    st.image(st.session_state.generated_image,
+             caption="AI Generated Preview", width="stretch")
+
     with st.expander("See AI Interpretation (Visual Prompt)"):
         st.write(st.session_state.generated_description)
-    
+
     # 4. Order Submission
     st.markdown("### Love it? Place your order!")
     with st.form("confirm_order_form"):
         user_name = st.text_input("Your Name")
         user_email = st.text_input("Your Email")
-        
+
         submit_order = st.form_submit_button("Confirm & Submit Order")
-        
+
         if submit_order:
             if not user_name or not user_email:
-                st.warning("Please provide your name and email to place the order.")
+                st.warning(
+                    "Please provide your name and email to place the order.")
             else:
                 # Prepare data
                 order_data = pd.DataFrame([{
@@ -371,10 +386,11 @@ if st.session_state.generated_image:
                     "Colors": st.session_state.form_inputs['colors'],
                     "Style": st.session_state.form_inputs['style'],
                     "AI Description": st.session_state.generated_description,
-                    
+
                 }])
-                
+
                 # Save to Sheets
                 if save_order(order_data):
-                    st.success("Order placed successfully! We'll be in touch soon.")
+                    st.success(
+                        "Order placed successfully! We'll be in touch soon.")
                     st.balloons()
